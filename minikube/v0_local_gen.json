@@ -1,0 +1,28 @@
+{
+    "generators": [
+      {
+        "name": "json_data_generator",
+        "directory": "/app/files",
+        "fileName": "sample_data",
+        "fileConfigs": {
+          "format": "json",
+          "filePrefix": "data_"
+        },
+        "data": {
+          "id": { "_gen": "uuid" },
+          "name": { "_gen": "string", "expr": "#{Name.fullName}" },
+          "age": { "_gen": "uniformDistribution", "bounds": [18, 80] }
+        },
+        "localConfigs": {
+          "maxEvents": 100,
+          "throttleMs": 1000
+        }
+      }
+    ],
+    "connections": {
+      "localFs": {
+        "kind": "fileSystem",
+        "path": "/app/files"
+      }
+    }
+  }

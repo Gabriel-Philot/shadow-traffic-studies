@@ -1,0 +1,11 @@
+services:
+  shadowtraffic:
+    image: shadowtraffic/shadowtraffic:latest
+    container_name: shadowtraffic-container
+    volumes:
+      - ./v0_local_gen.json:/workspace/v0_local_gen.json  # Mounts the config file
+      - ./files:/app/files  # Mounts the files directory from host to container
+    env_file:
+      - ./license.env  # Loads environment variables from license.env
+    entrypoint: ["java", "-Djava.security.manager=allow", "-jar", "/home/shadowtraffic.jar"]
+    command: ["--config", "/workspace/v0_local_gen.json"]
