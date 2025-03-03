@@ -1,0 +1,685 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+================================================================
+File Summary
+================================================================
+
+Purpose:
+--------
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+
+File Format:
+------------
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Multiple file entries, each consisting of:
+  a. A separator line (================)
+  b. The file path (File: path/to/file)
+  c. Another separator line
+  d. The full contents of the file
+  e. A blank line
+
+Usage Guidelines:
+-----------------
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+
+Notes:
+------
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+
+Additional Info:
+----------------
+
+================================================================
+Directory Structure
+================================================================
+localdir_test/
+  hello_world/
+    hello-world.json
+  local_file/
+    files/
+      data_0.json
+      data_1.json
+      data_2.json
+      data_3.json
+      data_4.json
+      data_5.json
+      data_6.json
+      data_7.json
+      data_8.json
+      data_9.json
+    Dockerfile
+    usefull-commands.md
+    v0_local_gen.json
+minikube/
+  access-control/
+    crb-jupyter.yaml
+  manifests/
+    deepstorage/
+      minio.yaml
+    management/
+      reflector.yaml
+    misc/
+      access-control.yaml
+      secrets.yaml
+  secrets/
+    minio-secrets.yaml
+  docker-compose.yaml
+  v0_local_gen.json
+.gitignore
+pre-full-guide.md
+README.md
+
+================================================================
+Files
+================================================================
+
+================
+File: localdir_test/hello_world/hello-world.json
+================
+{
+    "generators" : [ {
+      "topic" : "testTopic",
+      "value" : {
+        "emoji" : {
+          "_gen" : "oneOf",
+          "choices" : [ "👍", "🔥", "👑" ]
+        }
+      }
+    } ],
+    "connections" : {
+      "localKafka" : {
+        "kind" : "kafka",
+        "producerConfigs" : {
+          "bootstrap.servers" : "localhost:9092",
+          "key.serializer" : "io.shadowtraffic.kafka.serdes.JsonSerializer",
+          "value.serializer" : "io.shadowtraffic.kafka.serdes.JsonSerializer"
+        }
+      }
+    }
+  }
+
+================
+File: localdir_test/local_file/files/data_0.json
+================
+[{"id":"fe83682d-2f1a-1919-c849-e58a216a00de","name":"Donnetta Rowe","age":71.55218700296355}]
+
+================
+File: localdir_test/local_file/files/data_1.json
+================
+[{"id":"d32b57f2-a8b7-3ddb-3ff7-887f0c543618","name":"Xuan Berge","age":34.06830886332383}]
+
+================
+File: localdir_test/local_file/files/data_2.json
+================
+[{"id":"24270846-0e71-1e09-9bda-96fbcec3d544","name":"Kris Zulauf","age":47.12905955874765}]
+
+================
+File: localdir_test/local_file/files/data_3.json
+================
+[{"id":"92ad1265-6dd7-d8ec-9afe-d7f77c404890","name":"Linette Cummings","age":65.63055781190273}]
+
+================
+File: localdir_test/local_file/files/data_4.json
+================
+[{"id":"15152b09-1a30-36e4-d17c-39d41630fd9f","name":"Mrs. Cruz Moore","age":21.997486926002424}]
+
+================
+File: localdir_test/local_file/files/data_5.json
+================
+[{"id":"bc7b8556-e72e-79c7-b6da-543a69d6aba7","name":"Zoe Johnston","age":35.850794641873044}]
+
+================
+File: localdir_test/local_file/files/data_6.json
+================
+[{"id":"f1f8ca91-f615-25ed-8b2e-202f057383cd","name":"Teddy Boyer","age":28.426683388288254}]
+
+================
+File: localdir_test/local_file/files/data_7.json
+================
+[{"id":"7ac8e0ef-cf7b-fa1f-2c55-640f9b598eee","name":"Mrs. Arica Hodkiewicz","age":55.87600470042648}]
+
+================
+File: localdir_test/local_file/files/data_8.json
+================
+[{"id":"9906dcb8-57bd-3f66-4d50-e3fc2f0b6aac","name":"Tod Donnelly IV","age":70.83474815048623}]
+
+================
+File: localdir_test/local_file/files/data_9.json
+================
+[{"id":"7f33d1d1-a056-d6c9-0d9f-e438472d0259","name":"Sharan Schneider","age":22.11620903889414}]
+
+================
+File: localdir_test/local_file/Dockerfile
+================
+# Use a imagem base do shadowtraffic
+FROM shadowtraffic/shadowtraffic:latest
+
+# Criar diretórios necessários
+RUN mkdir -p /workspace /app/files
+
+# Copiar o arquivo de configuração v0_local_gen.json para o diretório /workspace
+COPY v0_local_gen.json /workspace/
+
+# Copiar o diretório files/ para /app/files no contêiner
+COPY files/ /app/files/
+
+# Copiar o arquivo de licença license.env
+COPY license.env /
+
+# Configurar entrypoint para carregar as variáveis de ambiente e executar o aplicativo
+ENTRYPOINT ["/bin/sh", "-c", "while IFS= read -r line; do \
+    if echo \"$line\" | grep -q -E '^[^#]'; then \
+        key=$(echo \"$line\" | cut -d= -f1); \
+        value=$(echo \"$line\" | cut -d= -f2-); \
+        export \"$key\"=\"$value\"; \
+    fi; \
+done < /license.env && java -Djava.security.manager=allow -jar /home/shadowtraffic.jar --config /workspace/v0_local_gen.json"]
+
+================
+File: localdir_test/local_file/usefull-commands.md
+================
+```bash
+docker build -t minha-shadowtraffic:v1 .
+```
+
+```bash
+docker run --name shadowtraffic-container minha-shadowtraffic:v1
+```
+
+```bash
+docker exec -it {container_name} /bin/sh
+```
+
+================
+File: localdir_test/local_file/v0_local_gen.json
+================
+{
+    "generators": [
+      {
+        "name": "json_data_generator",
+        "directory": "/app/files",
+        "fileName": "sample_data",
+        "fileConfigs": {
+          "format": "json",
+          "filePrefix": "data_"
+        },
+        "data": {
+          "id": { "_gen": "uuid" },
+          "name": { "_gen": "string", "expr": "#{Name.fullName}" },
+          "age": { "_gen": "uniformDistribution", "bounds": [18, 80] }
+        },
+        "localConfigs": {
+          "maxEvents": 10,
+          "throttleMs": 1000
+        }
+      }
+    ],
+    "connections": {
+      "localFs": {
+        "kind": "fileSystem",
+        "path": "/app/files"
+      }
+    }
+  }
+
+================
+File: minikube/access-control/crb-jupyter.yaml
+================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: crb-jupyter
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: default  
+    namespace: jupyter
+
+================
+File: minikube/manifests/deepstorage/minio.yaml
+================
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: minio
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
+  namespace: cicd
+spec:
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: deepstorage
+  project: default
+  source:
+    repoURL: 'https://charts.bitnami.com/bitnami'
+    targetRevision: 12.2.0
+    helm:
+      values: |-
+        auth:
+          existingSecret: minio-secrets
+        defaultBuckets: "landing, lakehouse"
+        service:
+          type: LoadBalancer
+        persistence:
+          size: 10Gi
+        volumePermissions:
+          enabled: true
+    chart: minio
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+================
+File: minikube/manifests/management/reflector.yaml
+================
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: reflector
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+  namespace: cicd
+spec:
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: management
+  project: default
+  source:
+    repoURL: 'https://emberstack.github.io/helm-charts'
+    targetRevision: 7.0.151        
+    chart: reflector
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+================
+File: minikube/manifests/misc/access-control.yaml
+================
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: access-control
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  namespace: cicd
+spec:
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: misc
+  project: default
+  source:
+    repoURL: "git@github.com:Gabriel-Philot/shadow-traffic-studies.git"
+    path: minikube/access-control/
+    targetRevision: HEAD
+    directory:
+      recurse: true
+      jsonnet: {}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+================
+File: minikube/manifests/misc/secrets.yaml
+================
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: secrets
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  namespace: cicd
+spec:
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: misc
+  project: default
+  source:
+    repoURL: "git@github.com:Gabriel-Philot/shadow-traffic-studies.git"
+    path: minikube/secrets/
+    targetRevision: HEAD
+    directory:
+      recurse: true
+      jsonnet: {}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+================
+File: minikube/secrets/minio-secrets.yaml
+================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-secrets
+  namespace: deepstorage
+  annotations:
+    reflector.v1.k8s.emberstack.com/reflection-auto-enabled: "true"
+    reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
+    reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: "deepstorage,processing,jupyter"
+type: Opaque
+data:
+  root-user: "bWluaW91c2Vy"
+  root-password: "bWluaW9zZWNyZXQ="
+
+================
+File: minikube/docker-compose.yaml
+================
+services:
+  shadowtraffic:
+    image: shadowtraffic/shadowtraffic:latest
+    container_name: shadowtraffic-container
+    volumes:
+      - ./v0_local_gen.json:/workspace/v0_local_gen.json  # Mounts the config file
+      - ./files:/app/files  # Mounts the files directory from host to container
+    env_file:
+      - ./license.env  # Loads environment variables from license.env
+    entrypoint: ["java", "-Djava.security.manager=allow", "-jar", "/home/shadowtraffic.jar"]
+    command: ["--config", "/workspace/v0_local_gen.json"]
+
+================
+File: minikube/v0_local_gen.json
+================
+{
+    "generators": [
+      {
+        "name": "json_data_generator",
+        "directory": "/app/files",
+        "fileName": "sample_data",
+        "fileConfigs": {
+          "format": "json",
+          "filePrefix": "data_"
+        },
+        "data": {
+          "id": { "_gen": "uuid" },
+          "name": { "_gen": "string", "expr": "#{Name.fullName}" },
+          "age": { "_gen": "uniformDistribution", "bounds": [18, 80] }
+        },
+        "localConfigs": {
+          "maxEvents": 100,
+          "throttleMs": 1000
+        }
+      }
+    ],
+    "connections": {
+      "localFs": {
+        "kind": "fileSystem",
+        "path": "/app/files"
+      }
+    }
+  }
+
+================
+File: .gitignore
+================
+# License files
+*license.env
+license.env
+**/license.env
+license.env*
+
+================
+File: pre-full-guide.md
+================
+```sh
+minikube start --memory=8000 --cpus=2
+```
+
+Para acessar alguns serviços via loadbalancer no Minikube, é necessário utilizar o [tunelamento do minikube](https://minikube.sigs.k8s.io/docs/handbook/accessing/#example-of-loadbalancer). Para isso, abra uma nova aba no seu terminal e execute o seguinte comando:
+```sh
+minikube tunnel
+```
+
+## Instalação das ferramentas
+
+Depois do ambiente inicializado será necessario instalar algumas aplicações que serão responsaveis por manter e gerenciar nosso pipeline de dados.
+
+Estando conectado em um cluster Kubernetes, execute os seguintes comandos para criar todos os namespaces necessarios:
+
+```sh
+kubectl create namespace orchestrator
+kubectl create namespace deepstorage
+kubectl create namespace cicd
+kubectl create namespace app
+kubectl create namespace management
+kubectl create namespace misc
+kubectl create namespace jupyter
+```
+
+Instale o argocd que será responsavel por manter nossas aplicações:
+```sh
+helm repo add argo https://argoproj.github.io/argo-helm
+helm repo update
+helm install argocd argo/argo-cd --namespace cicd --version 5.27.1
+```
+
+Altere o service do argo para loadbalancer:
+```sh
+# create a load balancer
+kubectl patch svc argocd-server -n cicd -p '{"spec": {"type": "LoadBalancer"}}'
+```
+
+Em seguida instale o argo cli para fazer a configuração do repositorio:
+```sh
+sudo curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+sudo chmod +x /usr/local/bin/argocd
+```
+Em seguida armazene o ip atribiudo para acessar o argo e faça o login no argo, com os seguintes comandos:
+```sh
+ARGOCD_LB=$(kubectl get services -n cicd -l app.kubernetes.io/name=argocd-server,app.kubernetes.io/instance=argocd -o jsonpath="{.items[0].status.loadBalancer.ingress[0].ip}")
+
+# get password to log into argocd portal
+# argocd login 192.168.0.200 --username admin --password UbV0FdJ2ZNCD8kxU --insecure
+kubectl get secret argocd-initial-admin-secret -n cicd -o jsonpath="{.data.password}" | base64 -d | xargs -t -I {} argocd login $ARGOCD_LB --username admin --password {} --insecure
+```
+> [!WARNING] 
+Here, the tunnel kernel will probably ask for sudo permission.
+
+
+
+Uma vez feita a autenticação não é necessario adicionar um cluster, pois o argo esta configurado para usar o cluster em que ele esta instalado, ou seja, o cluster local ja esta adicionado como **`--in-cluster`**, bastando apenas adicionar o seu repositorio com o seguinte comando:
+
+### Creating ssh key
+```sh
+# exemple
+ssh-keygen -t ed25519 -C "seu-email@example.com"  
+
+cat ~/.ssh/id_ed25519.pub
+
+```
+
+argocd repo add git@github.com:Gabriel-Philot/K8-Brewery_API-Upgrade.git --ssh-private-key-path ~/..ssh/id_ed25519.pub --insecure-skip-server-verification
+
+then paste it on github new ssh key.
+
+```sh
+
+argocd repo add git@github.com:Gabriel-Philot/{repo-path}.git --ssh-private-key-path ~/.ssh/{path-private-ssh-key-on computer} --insecure-skip-server-verification
+
+#example
+argocd repo add git@github.com:Gabriel-Philot/shadow-traffic-studies.git --ssh-private-key-path ~/.ssh/id_ed25519 --insecure-skip-server-verification
+```
+
+
+>[!NOTE] 
+caso queira ver o password do argo para acessar a interface web execute este comando: `kubectl get secret argocd-initial-admin-secret -n cicd -o jsonpath="{.data.password}" | base64 -d`
+
+
+> [!WARNING] 
+Lembrando que para este comando funcionar é necessario que você tenha uma `chave ssh` configurada para se conectar com o github no seu computador.
+
+Para acessar o argocd pelo IP gerado no Loadbalancer execute o comando:
+
+```sh
+echo http://$ARGOCD_LB
+```
+
+Uma vez que tenha acessado a pagina de autenticação do argocd use o `username` admin e o password gerado na instalação do argocd, executando o comando:
+
+```sh
+kubectl get secret argocd-initial-admin-secret -n cicd -o jsonpath="{.data.password}" | base64 -d
+```
+
+## Aqui o reflector armazena as secrets basicamente e distribui entre diferentes namespaces
+
+```sh
+kubectl apply -f minikube/manifests/management/reflector.yaml
+```
+
+Antes de executar os comandos, você pode alterar os secrets dos arquivos localizados na pasta `secrets/` se quiser mudar as senhas de acesso aos bancos de dados e ao storage.
+
+Após o Reflector estar funcionando, execute o comando que cria os secrets nos namespaces necessários:
+
+>[!NOTE] 
+> Reflector uses various access control methods and secrets to point to the repository containing the actual access configurations. It reads the file and retrieves its path.
+
+In this setup, we can modify the values in config.json (located at images/airflow/connections.json), but it's also necessary to update the corresponding secrets in minio-secrets.yaml and postgress-secrets.yaml. Be cautious with the Base64 encryption used in these files.
+
+>[!Warning] 
+> Watch the airflow.yaml file (line 50). If you change the keys, you'll need to update them there as well.
+
+### alterar github -> manifests/misc/secrets.yaml
+```sh
+# secrets
+kubectl apply -f minikube/manifests/misc/secrets.yaml
+```
+
+>[!NOTE] 
+Caso não queira instalar o Reflactor para automatizar o processo de criar o secret em vários namespaces diferentes, você pode replicar manualmente o secret para outro namespace executando este comando:
+
+
+[CASO NAO TENHA USADO O REFLECTOR]
+- kubectl get secret minio-secrets -n deepstorage -o yaml | sed s/"namespace: deepstorage"/"namespace: processing"/| kubectl apply -n processing -f
+
+
+Uma vez que os secrets estejam configurados, é possível instalar os bancos de dados e o storage do pipeline de dados com o seguinte comando:
+
+```sh
+# databases
+kubectl apply -f minikube/manifests/database/postgres.yaml
+
+# deep storage
+kubectl apply -f minikube/manifests/deepstorage/minio.yaml
+```
+
+Ótimo, agora que você configuro u as ferramentas necessárias, temos o ambiente de desenvolvimento e de execução instalado e pronto para uso.
+
+# Executando o projeto
+
+```sh
+# ingestion image
+eval $(minikube docker-env)
+docker build --no-cache -f images/python_ingestion/dockerfile images/python_ingestion/ -t gabrielphilot/brewapi-ingestion-minio:0.1
+
+# here dont forget if change this name, change it into dags yamls
+
+# for cloud deploy this image should be pushed into a repo.
+```
+
+
+>[!Note] 
+One way the debug your deploy of a pod.
+
+dúvida como fazer isso de uma forma melhor ?? debugar com o K8?
+
+```sh
+# ir até o path da do yaml
+kubectl apply -f brewapi_ingestion.yaml -n orchestrator
+
+kubectl logs brewapi-ingestion-minio -n orchestrator -c python-container
+```
+
+
+Para verificar os arquivos no `data lakehouse`, acesse a interface web do `MinIO` e use as credenciais de acesso encontradas no arquivo *[minio-secrets.yaml](/secrets/minio-secrets.yaml)* na pasta *[secrets](/secrets/)*. Caso não saiba o IP atribuído ao MinIO, execute:
+
+## geting miniO port
+
+```sh
+kubectl get services -n deepstorage -l app.kubernetes.io/name=minio -o jsonpath="{.items[0].status.loadBalancer.ingress[0].ip}"
+```
++9000
+
+Caso queira obter as credenciais de acesso do `MinIO`, execute:
+```sh
+echo "user: $(kubectl get secret minio-secrets -n deepstorage -o jsonpath="{.data.root-user}" | base64 -d)"
+echo "password: $(kubectl get secret minio-secrets -n deepstorage -o jsonpath="{.data.root-password}" | base64 -d)"
+```
+
+check out the dag in airflow UI + logs, and the files at MiniO.
+
+
+## Jupyter-notebook [acessing the data]
+```sh
+# Building image
+
+eval $(minikube docker-env)
+docker build --no-cache -f images/custom_jupyterlab/dockerfile images/custom_jupyterlab/ -t gabrielphilot/custom_jupyterlab:0.1
+```
+
+```sh
+# notebook
+kubectl apply -f minikube/manifests/notebook/jup-notebook.yaml
+```
+
+
+#### Need to nhance the token part but its ok.
+
+```sh
+# versão atual
+
+# external-ip 
+kubectl get svc -n jupyter
+
+# get token
+kubectl exec -it $(kubectl get pods -n jupyter -l app=custom-jupyter -o jsonpath='{.items[0].metadata.name}') -n jupyter -- jupyter server list
+
+```
+
+## Web interface
+```
+link = {external-ip} + 8888
+
+then use token in login page
+
+```
+
+================
+File: README.md
+================
+# shadow-traffic-studies
+
+## Goal of repo
+* Create a studie about how shadow-traffic works
+* Try to run a simple K8 lab to simulate a data pipeline with some cool things.
+* Enjoy myself while exploring a promesing/revolutionary new data generator.
+
+
+Lets begin shall we?
+### Seting up our k8 lab.
+
+Steps:
+
+
+
+================================================================
+End of Codebase
+================================================================
