@@ -6,5 +6,8 @@ services:
       - ./v0_local_gen_minio.json:/workspace/v0_local_gen_minio.json
     env_file:
       - ./license.env
-    entrypoint: ["java", "-Daws.region=us-east-1", "-Djava.security.manager=allow", "-jar", "/home/shadowtraffic.jar"]
+    environment:
+      - AWS_ACCESS_KEY_ID=miniouser
+      - AWS_SECRET_ACCESS_KEY=miniosecret
+    entrypoint: ["java", "-Djava.security.manager=allow", "-jar", "/home/shadowtraffic.jar"]
     command: ["--config", "/workspace/v0_local_gen_minio.json"]

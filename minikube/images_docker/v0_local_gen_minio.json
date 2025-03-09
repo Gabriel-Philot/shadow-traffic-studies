@@ -22,14 +22,7 @@
     "minioConnection": {
       "kind": "s3",
       "endpoint": "http://10.108.217.62:9000",
-      "accessKey": "miniouser",
-      "secretKey": "miniosecret",
-      "bucketMap": {
-        "landing": {
-          "autoCreate": true
-        }
-      },
-      "generatorRefs": ["minio_data_generator"]
+      "pathStyleAccess": true
     }
   }
 }
