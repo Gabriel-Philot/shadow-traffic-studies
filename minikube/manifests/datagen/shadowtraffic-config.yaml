@@ -6,18 +6,22 @@ metadata:
 data:
   v0_local_gen_minio.json: |
     {
-      "generators": 
-      [
+      "generators": [
         {
           "connection": "s3",
           "bucket": "landing",
-          "data": {
-            "_gen": "oneOf",
-            "choices": ["👍", "🔥", "❤️"]
-          },
           "bucketConfigs": {
-            "format": "jsonl",
-            "keyPrefix": "part-"
+            "keyPrefix": "shadow-traffic-data/",
+            "format": "json"
+          },
+          "data": {
+            "id": { "_gen": "uuid" },
+            "name": { "_gen": "string", "expr": "#{Name.fullName}" },
+            "age": { "_gen": "uniformDistribution", "bounds": [18, 80] }
+          },
+          "localConfigs": {
+            "maxEvents": 100,
+            "throttleMs": 1000
           }
         }
       ],
@@ -27,7 +31,7 @@ data:
           "connectionConfigs": {
             "endpoint": "http://minio.deepstorage.svc.cluster.local:9000",
             "pathStyleAccess": true,
-            "forcePathStyle": true 
+            "forcePathStyle": true
           }
         }
       }
