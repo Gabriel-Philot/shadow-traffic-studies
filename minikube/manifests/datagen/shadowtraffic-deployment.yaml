@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shadowtraffic
+  namespace: datagen
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shadowtraffic
+  template:
+    metadata:
+      labels:
+        app: shadowtraffic
+    spec:
+      containers:
+        - name: shadowtraffic
+          image: shadowtraffic-datagen:latest
+          imagePullPolicy: Never
+          env:
+            - name: LICENSE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: generator-secrets
+                  key: LICENSE_ID
+            - name: LICENSE_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: generator-secrets
+                  key: LICENSE_EMAIL
+            - name: LICENSE_ORGANIZATION
+              valueFrom:
+                secretKeyRef:
+                  name: generator-secrets
+                  key: LICENSE_ORGANIZATION
+            - name: LICENSE_EDITION
+              valueFrom:
+                secretKeyRef:
+                  name: generator-secrets
+                  key: LICENSE_EDITION
+            - name: LICENSE_EXPIRATION
+              valueFrom:
+                secretKeyRef:
+                  name: generator-secrets
+                  key: LICENSE_EXPIRATION
+            - name: LICENSE_SIGNATURE
+              valueFrom:
+                secretKeyRef:
+                  name: generator-secrets
+                  key: LICENSE_SIGNATURE
+            - name: AWS_ACCESS_KEY_ID
+              value: "miniouser"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "miniosecret" 
+            - name: AWS_REGION
+              value: "us-east-1"
+          volumeMounts:
+            - name: config-volume
+              mountPath: /workspace/v0_local_gen_minio.json
+              subPath: v0_local_gen_minio.json
+      volumes:
+        - name: config-volume
+          configMap:
+            name: shadowtraffic-config

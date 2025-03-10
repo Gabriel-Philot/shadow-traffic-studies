@@ -1,23 +1,16 @@
-# Use a imagem base do shadowtraffic
+# Usar a imagem base do ShadowTraffic
 FROM shadowtraffic/shadowtraffic:latest
 
-# Criar diretórios necessários
-RUN mkdir -p /workspace /app/files
+# Instrução para usar variáveis de ambiente no ShadowTraffic
+ENV LICENSE_ID=$LICENSE_ID
+ENV LICENSE_EMAIL=$LICENSE_EMAIL
+ENV LICENSE_ORGANIZATION=$LICENSE_ORGANIZATION
+ENV LICENSE_EDITION=$LICENSE_EDITION
+ENV LICENSE_EXPIRATION=$LICENSE_EXPIRATION
+ENV LICENSE_SIGNATURE=$LICENSE_SIGNATURE
+ENV AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+ENV AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+ENV AWS_REGION=$AWS_REGION
 
-# Copiar o arquivo de configuração v0_local_gen.json para o diretório /workspace
-COPY v0_local_gen.json /workspace/
-
-# Copiar o diretório files/ para /app/files no contêiner
-COPY files/ /app/files/
-
-# Copiar o arquivo de licença license.env
-COPY license.env /
-
-# Configurar entrypoint para carregar as variáveis de ambiente e executar o aplicativo
-ENTRYPOINT ["/bin/sh", "-c", "while IFS= read -r line; do \
-    if echo \"$line\" | grep -q -E '^[^#]'; then \
-        key=$(echo \"$line\" | cut -d= -f1); \
-        value=$(echo \"$line\" | cut -d= -f2-); \
-        export \"$key\"=\"$value\"; \
-    fi; \
-done < /license.env && java -Djava.security.manager=allow -jar /home/shadowtraffic.jar --config /workspace/v0_local_gen.json"]
+# Comando de entrada, garantindo que as variáveis sejam usadas
+CMD ["shadowtraffic", "--config", "/workspace/v0_local_gen_minio.json"]

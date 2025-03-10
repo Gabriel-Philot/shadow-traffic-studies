@@ -134,41 +134,39 @@ Uma vez que os secrets estejam configurados, é possível instalar os bancos de 
 
 ```sh
 # databases
-kubectl apply -f minikube/manifests/database/postgres.yaml
+!!! OFF HERE kubectl apply -f minikube/manifests/database/postgres.yaml !!! OFF HERE
 
 # deep storage
 kubectl apply -f minikube/manifests/deepstorage/minio.yaml
 ```
 
-Ótimo, agora que você configuro u as ferramentas necessárias, temos o ambiente de desenvolvimento e de execução instalado e pronto para uso.
-
 # Executando o projeto
 
 ```sh
-# ingestion image
+# shadowtraffic-img
 eval $(minikube docker-env)
-docker build --no-cache -f images/python_ingestion/dockerfile images/python_ingestion/ -t gabrielphilot/brewapi-ingestion-minio:0.1
-
-# here dont forget if change this name, change it into dags yamls
-
-# for cloud deploy this image should be pushed into a repo.
+docker build --no-cache -f minikube/images_docker/Dockerfile -t shadowtraffic-datagen:latest .
+```
+```bash
+# Aplicar o secret com informações de licença
+kubectl apply -f minikube/manifests/datagen/generator-secrets.yaml
 ```
 
-
->[!Note] 
-One way the debug your deploy of a pod.
-
-dúvida como fazer isso de uma forma melhor ?? debugar com o K8?
-
-```sh
-# ir até o path da do yaml
-kubectl apply -f brewapi_ingestion.yaml -n orchestrator
-
-kubectl logs brewapi-ingestion-minio -n orchestrator -c python-container
+```bash
+# Aplicar o ConfigMap com a configuração
+kubectl apply -f minikube/manifests/datagen/shadowtraffic-config.yaml
 ```
 
+```bash
+# Aplicar o Deployment
+kubectl apply -f minikube/manifests/datagen/shadowtraffic-deployment.yaml
+```
+```bash
+# Verificar se o pod está em execução
+kubectl get pods -n datagen
+```
 
-Para verificar os arquivos no `data lakehouse`, acesse a interface web do `MinIO` e use as credenciais de acesso encontradas no arquivo *[minio-secrets.yaml](/secrets/minio-secrets.yaml)* na pasta *[secrets](/secrets/)*. Caso não saiba o IP atribuído ao MinIO, execute:
+Para verificar os arquivos no `data lake`, acesse a interface web do `MinIO` e use as credenciais de acesso encontradas no arquivo *[minio-secrets.yaml](/secrets/minio-secrets.yaml)* na pasta *[secrets](/secrets/)*. Caso não saiba o IP atribuído ao MinIO, execute:
 
 ## geting miniO port
 
