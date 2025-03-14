@@ -14,12 +14,8 @@ data:
             "keyPrefix": "shadow-traffic-data/customers/",
             "format": "json"
           },
-          "fork": {
-            "maxForks": 20,
-            "key": { "_gen": "uuid" }
-          },
           "data": {
-            "id": { "_gen": "var", "var": "forkKey" },
+            "id": { "_gen": "uuid" },
             "profile": {
               "first_name": { "_gen": "string", "expr": "#{Name.firstName}" },
               "last_name": { "_gen": "string", "expr": "#{Name.lastName}" },
@@ -41,7 +37,7 @@ data:
             }
           },
           "localConfigs": {
-            "maxEvents": 5,
+            "maxEvents": 100,
             "throttleMs": 1000
           }
         }

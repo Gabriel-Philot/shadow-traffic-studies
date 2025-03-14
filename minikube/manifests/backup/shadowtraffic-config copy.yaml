@@ -12,14 +12,10 @@ data:
           "bucket": "landing",
           "bucketConfigs": {
             "keyPrefix": "shadow-traffic-data/customers/",
-            "format": "json"
-          },
-          "fork": {
-            "maxForks": 20,
-            "key": { "_gen": "uuid" }
+            "format": "jsonl"
           },
           "data": {
-            "id": { "_gen": "var", "var": "forkKey" },
+            "id": { "_gen": "uuid" },
             "profile": {
               "first_name": { "_gen": "string", "expr": "#{Name.firstName}" },
               "last_name": { "_gen": "string", "expr": "#{Name.lastName}" },
@@ -41,8 +37,8 @@ data:
             }
           },
           "localConfigs": {
-            "maxEvents": 5,
-            "throttleMs": 1000
+            "maxEvents": 100,
+            "throttleMs": 100
           }
         }
       ],
@@ -53,6 +49,11 @@ data:
             "endpoint": "http://minio.deepstorage.svc.cluster.local:9000",
             "pathStyleAccess": true,
             "forcePathStyle": true
+          },
+          "batchConfigs": {
+            "lingerMs": 5000,
+            "batchElements": 15,
+            "batchBytes": 1048576
           }
         }
       }
