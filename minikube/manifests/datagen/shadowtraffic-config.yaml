@@ -11,13 +11,30 @@ data:
           "connection": "s3",
           "bucket": "landing",
           "bucketConfigs": {
-            "keyPrefix": "shadow-traffic-data/",
+            "keyPrefix": "shadow-traffic-data/customers/",
             "format": "json"
           },
           "data": {
             "id": { "_gen": "uuid" },
-            "name": { "_gen": "string", "expr": "#{Name.fullName}" },
-            "age": { "_gen": "uniformDistribution", "bounds": [18, 80] }
+            "profile": {
+              "first_name": { "_gen": "string", "expr": "#{Name.firstName}" },
+              "last_name": { "_gen": "string", "expr": "#{Name.lastName}" },
+              "full_name": { "_gen": "string", "expr": "#{Name.fullName}" },
+              "age": { "_gen": "uniformDistribution", "bounds": [18, 80], "decimals": 0 },
+              "email": { "_gen": "string", "expr": "#{Internet.emailAddress}" },
+              "avatar": { "_gen": "string", "expr": "https://cloudflare-ipfs.com/ipfs/Qmd3W5DuhgHirLHGVixi6V76LhCkZUz6pnFt5AJBiyvHye/avatar/#{number.numberBetween '1','1000'}.jpg" }
+            },
+            "address": {
+              "street": { "_gen": "string", "expr": "#{Address.streetAddress}" },
+              "city": { "_gen": "string", "expr": "#{Address.city}" },
+              "state": { "_gen": "string", "expr": "#{Address.stateAbbr}" },
+              "zipcode": { "_gen": "string", "expr": "#{Address.zipCode}" },
+              "country": { "_gen": "string", "expr": "#{Address.country}" },
+              "coordinates": {
+                "latitude": { "_gen": "uniformDistribution", "bounds": [-90, 90], "decimals": 6 },
+                "longitude": { "_gen": "uniformDistribution", "bounds": [-180, 180], "decimals": 6 }
+              }
+            }
           },
           "localConfigs": {
             "maxEvents": 100,

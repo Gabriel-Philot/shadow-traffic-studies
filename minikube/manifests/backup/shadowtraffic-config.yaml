@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shadowtraffic-config
+  namespace: datagen
+data:
+  v0_local_gen_minio.json: |
+    {
+      "generators": [
+        {
+          "connection": "s3",
+          "bucket": "landing",
+          "bucketConfigs": {
+            "keyPrefix": "shadow-traffic-data/",
+            "format": "json"
+          },
+          "data": {
+            "id": { "_gen": "uuid" },
+            "name": { "_gen": "string", "expr": "#{Name.fullName}" },
+            "age": { "_gen": "uniformDistribution", "bounds": [18, 80] }
+          },
+          "localConfigs": {
+            "maxEvents": 100,
+            "throttleMs": 1000
+          }
+        }
+      ],
+      "connections": {
+        "s3": {
+          "kind": "s3",
+          "connectionConfigs": {
+            "endpoint": "http://minio.deepstorage.svc.cluster.local:9000",
+            "pathStyleAccess": true,
+            "forcePathStyle": true
+          }
+        }
+      }
+    }

@@ -166,6 +166,20 @@ kubectl apply -f minikube/manifests/datagen/shadowtraffic-deployment.yaml
 kubectl get pods -n datagen
 ```
 
+##### All in one
+```bash
+kubectl apply -f minikube/manifests/datagen/generator-secrets.yaml
+kubectl apply -f minikube/manifests/datagen/shadowtraffic-config.yaml
+kubectl apply -f minikube/manifests/datagen/shadowtraffic-deployment.yaml
+```
+## to delete all too
+```bash
+kubectl delete deployment shadowtraffic -n datagen 
+kubectl delete configmap shadowtraffic-config -n datagen 
+kubectl delete secret generator-secrets -n datagen 
+```
+
+
 Para verificar os arquivos no `data lake`, acesse a interface web do `MinIO` e use as credenciais de acesso encontradas no arquivo *[minio-secrets.yaml](/secrets/minio-secrets.yaml)* na pasta *[secrets](/secrets/)*. Caso não saiba o IP atribuído ao MinIO, execute:
 
 ## geting miniO port
