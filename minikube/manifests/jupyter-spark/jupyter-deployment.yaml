@@ -1,16 +1,23 @@
-apiVersion: v1
-kind: Service
+apiVersion: argoproj.io/v1alpha1
+kind: Application
 metadata:
   name: jupyter
-  namespace: jupyter
+  namespace: cicd
 spec:
-  type: LoadBalancer
-  ports:
-  - port: 8888
-    targetPort: 8888
-    protocol: TCP
-  selector:
-    app: jupyter
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: jupyter
+  source:
+    repoURL: git@github.com:Gabriel-Philot/shadow-traffic-studies.git
+    targetRevision: HEAD
+    path: minikube/manifests/jupyter-spark
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -27,7 +34,6 @@ spec:
       labels:
         app: jupyter
     spec:
-      serviceAccountName: default
       containers:
       - name: jupyter
         image: jupyter:latest
