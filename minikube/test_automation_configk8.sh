@@ -113,6 +113,12 @@ kubectl apply -f manifests/misc/secrets.yaml
 print_warning "Waiting for Secrets to be processed (10 seconds)..."
 sleep 10
 
+print_section "Setting up Acess control"
+kubectl apply -f access-control/crb-jupyter.yaml
+
+print_warning "Waiting for Acess control to be processed (10 seconds)..."
+sleep 10
+
 print_section "Setting up MinIO Storage"
 kubectl apply -f manifests/deepstorage/minio.yaml
 
@@ -125,7 +131,7 @@ print_section "Building and deploying ShadowTraffic data generator"
 eval $(minikube docker-env)
 
 echo "Building ShadowTraffic Docker image..."
-docker build --no-cache -f images_docker/Dockerfile -t shadowtraffic-datagen:latest .
+docker build --no-cache -f images_docker/datagenShadow/Dockerfile -t shadowtraffic-datagen:latest .
 
 echo "Deploying ShadowTraffic components..."
 kubectl apply -f manifests/datagen/generator-secrets.yaml
