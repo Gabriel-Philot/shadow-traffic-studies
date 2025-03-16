@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: jupyter
+  name: custom-jupyter
   namespace: cicd
 spec:
   project: default
@@ -19,20 +19,34 @@ spec:
       prune: true
       selfHeal: true
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: custom-jupyter
+  namespace: jupyter
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8888
+    targetPort: 8888
+    protocol: TCP
+  selector:
+    app: custom-jupyter
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: jupyter
+  name: custom-jupyter
   namespace: jupyter
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: jupyter
+      app: custom-jupyter
   template:
     metadata:
       labels:
-        app: jupyter
+        app: custom-jupyter
     spec:
       containers:
       - name: jupyter
