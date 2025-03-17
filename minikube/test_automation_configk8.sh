@@ -66,6 +66,7 @@ kubectl create namespace app 2>/dev/null || echo "Namespace app already exists"
 kubectl create namespace management 2>/dev/null || echo "Namespace management already exists"
 kubectl create namespace misc 2>/dev/null || echo "Namespace misc already exists"
 kubectl create namespace jupyter 2>/dev/null || echo "Namespace jupyter already exists"
+kubectl create namespace processing 2>/dev/null || echo "Namespace jupyter already exists"
 kubectl create namespace datagen 2>/dev/null || echo "Namespace datagen already exists"
 
 print_section "Installing ArgoCD"

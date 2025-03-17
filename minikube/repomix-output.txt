@@ -48,8 +48,11 @@ Directory Structure
 access-control/
   crb-jupyter.yaml
 images_docker/
-  Dockerfile
-  license.env
+  datagenShadow/
+    Dockerfile
+    license.env
+  jupyter-spark/
+    Dockerfile
 manifests/
   backup/
     shadowtraffic-config copy.yaml
@@ -61,6 +64,8 @@ manifests/
     shadowtraffic-deployment.yaml
   deepstorage/
     minio.yaml
+  jupyter-spark/
+    jupyter-app.yaml
   management/
     reflector.yaml
   misc/
@@ -68,7 +73,9 @@ manifests/
     secrets.yaml
 secrets/
   minio-secrets.yaml
+explore_landing_data_with_spark.py
 license.env
+test_automation_configk8.sh
 test_minio_connection.sh
 
 ================================================================
@@ -92,7 +99,7 @@ subjects:
     namespace: jupyter
 
 ================
-File: images_docker/Dockerfile
+File: images_docker/datagenShadow/Dockerfile
 ================
 # Usar a imagem base do ShadowTraffic
 FROM shadowtraffic/shadowtraffic:latest
@@ -112,7 +119,7 @@ ENV AWS_REGION=$AWS_REGION
 CMD ["shadowtraffic", "--config", "/workspace/v0_local_gen_minio.json"]
 
 ================
-File: images_docker/license.env
+File: images_docker/datagenShadow/license.env
 ================
 LICENSE_ID=cb9552fb-2902-49ce-b178-61190a602079
 LICENSE_EMAIL=gabriel2024case@gmail.com
@@ -120,6 +127,36 @@ LICENSE_ORGANIZATION=gordostest
 LICENSE_EDITION=ShadowTraffic Free Trial
 LICENSE_EXPIRATION=2025-03-23
 LICENSE_SIGNATURE=cI+afvP4GPbNgN95/rGY/lHNlyICrctVviPbP7AtqVpuwXufaNX7lg8cPfbgnsd6ljuUfRceGeYLANF7L5pJj1kQFc/mQhAAowxbXjhUCRcjh9T8iqW7P9Fc6AHHbCDJ0/niEQ2Qvl/98Knke13CvoFCzPnEZHCQVh9Sy5EcpFA8T9j5LYGbv+YxdKYxxT68aPL9lRSZPeLFwEVjY83YCoM4hlYyq9FTrYCKQwIE0UoJjhY8Uy1Gt5Iqj0z4MoFMyTOAph8AmA0iZdckTEZO6dxUu5HrFmuL4Y9EIUqjydFXYzqwtvvaH7i5w4fSCdJhhhDRM94cD5JIw+B5WykBug==
+
+================
+File: images_docker/jupyter-spark/Dockerfile
+================
+FROM jupyter/pyspark-notebook:latest
+
+USER root
+
+# Install additional Python packages
+RUN pip install --no-cache-dir \
+    delta-spark \
+    boto3 \
+    s3fs \
+    matplotlib \
+    seaborn \
+    pandas \
+    pyarrow
+
+# Create directories for resources and configs
+RUN mkdir -p /home/jovyan/resources /home/jovyan/config /home/jovyan/work && \
+    chown -R jovyan:users /home/jovyan/resources /home/jovyan/config /home/jovyan/work
+
+# Switch back to jovyan user
+USER jovyan
+
+# Set environment variables for Spark
+ENV PYSPARK_SUBMIT_ARGS="--packages io.delta:delta-core_2.12:2.1.0,org.apache.hadoop:hadoop-aws:3.3.1 pyspark-shell"
+
+# Define the startup command for JupyterLab - simpler like your original
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser"]
 
 ================
 File: manifests/backup/shadowtraffic-config copy.yaml
@@ -474,6 +511,86 @@ spec:
       selfHeal: true
 
 ================
+File: manifests/jupyter-spark/jupyter-app.yaml
+================
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: custom-jupyter
+  namespace: cicd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: jupyter
+  source:
+    repoURL: git@github.com:Gabriel-Philot/shadow-traffic-studies.git
+    targetRevision: HEAD
+    path: minikube/manifests/jupyter-spark
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: custom-jupyter
+  namespace: jupyter
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8888
+    targetPort: 8888
+    protocol: TCP
+  selector:
+    app: custom-jupyter
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: custom-jupyter
+  namespace: jupyter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: custom-jupyter
+  template:
+    metadata:
+      labels:
+        app: custom-jupyter
+    spec:
+      containers:
+      - name: jupyter
+        image: jupyter:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8888
+        env:
+        - name: MINIO_ENDPOINT
+          value: "http://minio.deepstorage.svc.cluster.local:9000"
+        - name: MINIO_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secrets
+              key: root-user
+        - name: MINIO_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-secrets
+              key: root-password
+        resources:
+          limits:
+            memory: "4Gi"
+            cpu: "2"
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+
+================
 File: manifests/management/reflector.yaml
 ================
 apiVersion: argoproj.io/v1alpha1
@@ -569,6 +686,42 @@ data:
   root-password: "bWluaW9zZWNyZXQ="
 
 ================
+File: explore_landing_data_with_spark.py
+================
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import *
+from pyspark.sql.types import *
+import os
+
+
+# Obter credenciais do MinIO
+minio_endpoint = os.environ.get('MINIO_ENDPOINT')
+minio_access_key = os.environ.get('MINIO_ACCESS_KEY')
+minio_secret_key = os.environ.get('MINIO_SECRET_KEY')
+
+# Criar sessão Spark
+spark = SparkSession.builder \
+    .appName("TestSparkMinIO") \
+    .config("spark.hadoop.fs.s3a.access.key", minio_access_key) \
+    .config("spark.hadoop.fs.s3a.secret.key", minio_secret_key) \
+    .config("spark.hadoop.fs.s3a.endpoint", minio_endpoint.replace("http://", "")) \
+    .config("spark.hadoop.fs.s3a.path.style.access", "true") \
+    .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
+    .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
+    .getOrCreate()
+
+print(f"Spark version: {spark.version}")
+
+# Testar leitura do MinIO
+try:
+    path = "s3a://landing/shadow-traffic-data/customers/"
+    df = spark.read.json(path)
+    print("Amostra de dados:")
+    df.show(5)
+except Exception as e:
+    print(f"Erro ao ler dados: {e}")
+
+================
 File: license.env
 ================
 LICENSE_ID=cb9552fb-2902-49ce-b178-61190a602079
@@ -577,6 +730,178 @@ LICENSE_ORGANIZATION=gordostest
 LICENSE_EDITION=ShadowTraffic Free Trial
 LICENSE_EXPIRATION=2025-03-23
 LICENSE_SIGNATURE=cI+afvP4GPbNgN95/rGY/lHNlyICrctVviPbP7AtqVpuwXufaNX7lg8cPfbgnsd6ljuUfRceGeYLANF7L5pJj1kQFc/mQhAAowxbXjhUCRcjh9T8iqW7P9Fc6AHHbCDJ0/niEQ2Qvl/98Knke13CvoFCzPnEZHCQVh9Sy5EcpFA8T9j5LYGbv+YxdKYxxT68aPL9lRSZPeLFwEVjY83YCoM4hlYyq9FTrYCKQwIE0UoJjhY8Uy1Gt5Iqj0z4MoFMyTOAph8AmA0iZdckTEZO6dxUu5HrFmuL4Y9EIUqjydFXYzqwtvvaH7i5w4fSCdJhhhDRM94cD5JIw+B5WykBug==
+
+================
+File: test_automation_configk8.sh
+================
+#!/bin/bash
+
+# Exit on error
+set -e
+
+# Color codes for better output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Helper functions
+print_section() {
+    echo -e "${BLUE}===================================================${NC}"
+    echo -e "${BLUE}$1${NC}"
+    echo -e "${BLUE}===================================================${NC}"
+}
+
+print_success() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠ $1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}✗ $1${NC}"
+}
+
+wait_for_pod_ready() {
+    namespace=$1
+    label=$2
+    echo -e "Waiting for pods with label $label in namespace $namespace to be ready..."
+    
+    while [[ $(kubectl get pods -n $namespace -l $label -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do
+        echo -n "."
+        sleep 3
+    done
+    echo
+    print_success "Pod is ready!"
+}
+
+wait_for_loadbalancer_ip() {
+    namespace=$1
+    label=$2
+    echo -e "Waiting for LoadBalancer IP for service with label $label in namespace $namespace..."
+    
+    while [[ -z $(kubectl get services -n $namespace -l $label -o jsonpath="{.items[0].status.loadBalancer.ingress[0].ip}") ]]; do
+        echo -n "."
+        sleep 3
+    done
+    echo
+    print_success "LoadBalancer IP is ready!"
+}
+
+# Assuming minikube is already running
+print_success "Minikube is assumed to be running with tunnel active"
+
+print_section "Creating necessary namespaces"
+kubectl create namespace orchestrator 2>/dev/null || echo "Namespace orchestrator already exists"
+kubectl create namespace deepstorage 2>/dev/null || echo "Namespace deepstorage already exists"
+kubectl create namespace cicd 2>/dev/null || echo "Namespace cicd already exists"
+kubectl create namespace app 2>/dev/null || echo "Namespace app already exists"
+kubectl create namespace management 2>/dev/null || echo "Namespace management already exists"
+kubectl create namespace misc 2>/dev/null || echo "Namespace misc already exists"
+kubectl create namespace jupyter 2>/dev/null || echo "Namespace jupyter already exists"
+kubectl create namespace datagen 2>/dev/null || echo "Namespace datagen already exists"
+
+print_section "Installing ArgoCD"
+echo "Installing ArgoCD with Helm..."
+helm install argocd argo/argo-cd --namespace cicd --version 5.27.1 || echo "ArgoCD already installed or error occurred"
+
+echo "Patching ArgoCD server service to use LoadBalancer..."
+kubectl patch svc argocd-server -n cicd -p '{"spec": {"type": "LoadBalancer"}}'
+
+print_section "Waiting for ArgoCD to be ready"
+wait_for_pod_ready "cicd" "app.kubernetes.io/name=argocd-server"
+wait_for_loadbalancer_ip "cicd" "app.kubernetes.io/name=argocd-server"
+
+# Store ArgoCD LoadBalancer IP
+ARGOCD_LB=$(kubectl get services -n cicd -l app.kubernetes.io/name=argocd-server -o jsonpath="{.items[0].status.loadBalancer.ingress[0].ip}")
+print_success "ArgoCD LoadBalancer IP: $ARGOCD_LB"
+
+# Get ArgoCD admin password
+ARGOCD_PASSWORD=$(kubectl get secret argocd-initial-admin-secret -n cicd -o jsonpath="{.data.password}" | base64 -d)
+print_success "ArgoCD admin password: $ARGOCD_PASSWORD"
+
+echo "ArgoCD web interface available at: http://$ARGOCD_LB"
+
+# Assuming minikube tunnel is already running
+print_success "Minikube tunnel is assumed to be running in another terminal"
+
+print_section "Adding Git repository to ArgoCD"
+echo "Logging into ArgoCD..."
+kubectl get secret argocd-initial-admin-secret -n cicd -o jsonpath="{.data.password}" | base64 -d | xargs -t -I {} argocd login $ARGOCD_LB --username admin --password {} --insecure
+
+echo "Adding repository to ArgoCD..."
+argocd repo add git@github.com:Gabriel-Philot/shadow-traffic-studies.git --ssh-private-key-path ~/.ssh/id_ed25519 --insecure-skip-server-verification
+
+print_success "Repository added to ArgoCD"
+
+print_section "Setting up Reflector for secret management"
+kubectl apply -f manifests/management/reflector.yaml
+
+print_warning "Waiting for Reflector to be deployed (30 seconds)..."
+sleep 30
+
+print_section "Setting up Secrets"
+kubectl apply -f manifests/misc/secrets.yaml
+
+print_warning "Waiting for Secrets to be processed (10 seconds)..."
+sleep 10
+
+print_section "Setting up Acess control"
+kubectl apply -f access-control/crb-jupyter.yaml
+
+print_warning "Waiting for Acess control to be processed (10 seconds)..."
+sleep 10
+
+print_section "Setting up MinIO Storage"
+kubectl apply -f manifests/deepstorage/minio.yaml
+
+print_warning "Waiting for MinIO to be deployed (45 seconds)..."
+sleep 45
+
+print_section "Building and deploying ShadowTraffic data generator"
+
+# Switch to minikube's Docker environment
+eval $(minikube docker-env)
+
+echo "Building ShadowTraffic Docker image..."
+docker build --no-cache -f images_docker/datagenShadow/Dockerfile -t shadowtraffic-datagen:latest .
+
+echo "Deploying ShadowTraffic components..."
+kubectl apply -f manifests/datagen/generator-secrets.yaml
+kubectl apply -f manifests/datagen/shadowtraffic-config.yaml
+kubectl apply -f manifests/datagen/shadowtraffic-deployment.yaml
+
+wait_for_pod_ready "datagen" "app=shadowtraffic"
+
+print_section "Getting access credentials"
+
+# Get MinIO LoadBalancer IP
+MINIO_LB=$(kubectl get services -n deepstorage -l app.kubernetes.io/name=minio -o jsonpath="{.items[0].status.loadBalancer.ingress[0].ip}")
+MINIO_USER=$(kubectl get secret minio-secrets -n deepstorage -o jsonpath="{.data.root-user}" | base64 -d)
+MINIO_PASSWORD=$(kubectl get secret minio-secrets -n deepstorage -o jsonpath="{.data.root-password}" | base64 -d)
+
+print_success "Setup Complete!"
+echo "================ SERVICE ACCESS INFORMATION ================"
+echo "ArgoCD:"
+echo "  URL: http://$ARGOCD_LB"
+echo "  Username: admin"
+echo "  Password: $ARGOCD_PASSWORD"
+echo ""
+echo "MinIO:"
+echo "  URL: http://$MINIO_LB:9000"
+echo "  Username: $MINIO_USER"
+echo "  Password: $MINIO_PASSWORD"
+
+print_success "Git repository has been configured in ArgoCD"
+
+echo "To check the ShadowTraffic generator status, run:"
+echo "kubectl get pods -n datagen"
+
+# Return to the original Docker environment
+eval $(minikube docker-env -u)
 
 ================
 File: test_minio_connection.sh
