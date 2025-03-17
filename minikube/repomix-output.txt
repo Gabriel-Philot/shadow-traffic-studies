@@ -71,6 +71,8 @@ manifests/
   misc/
     access-control.yaml
     secrets.yaml
+  processing/
+    spark-operator.yaml
 secrets/
   minio-secrets.yaml
 explore_landing_data_with_spark.py
@@ -497,7 +499,7 @@ spec:
       values: |-
         auth:
           existingSecret: minio-secrets
-        defaultBuckets: "landing, lakehouse"
+        defaultBuckets: "landing, lakehouse, scripts"
         service:
           type: LoadBalancer
         persistence:
@@ -669,6 +671,46 @@ spec:
       selfHeal: true
 
 ================
+File: manifests/processing/spark-operator.yaml
+================
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: spark
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  namespace: cicd
+spec:
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: processing
+  project: default
+  source:
+    repoURL: "https://googlecloudplatform.github.io/spark-on-k8s-operator"
+    targetRevision: 1.1.25
+    helm:
+      values: |-
+        webhook:
+          enable: true
+        sparkJobNamespace: processing
+        serviceAccounts:
+          spark:
+            name: spark
+        operator:
+          image:
+            repository: gcr.io/spark-operator/spark-operator
+            tag: v1.1.25
+        spark:
+          image:
+            repository: apache/spark
+            tag: 3.5.1
+    chart: spark-operator
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+================
 File: secrets/minio-secrets.yaml
 ================
 apiVersion: v1
@@ -679,7 +721,7 @@ metadata:
   annotations:
     reflector.v1.k8s.emberstack.com/reflection-auto-enabled: "true"
     reflector.v1.k8s.emberstack.com/reflection-allowed: "true"
-    reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: "deepstorage,datagen,jupyter"
+    reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces: "deepstorage,datagen,jupyter, processing"
 type: Opaque
 data:
   root-user: "bWluaW91c2Vy"
@@ -802,6 +844,7 @@ kubectl create namespace app 2>/dev/null || echo "Namespace app already exists"
 kubectl create namespace management 2>/dev/null || echo "Namespace management already exists"
 kubectl create namespace misc 2>/dev/null || echo "Namespace misc already exists"
 kubectl create namespace jupyter 2>/dev/null || echo "Namespace jupyter already exists"
+kubectl create namespace processing 2>/dev/null || echo "Namespace jupyter already exists"
 kubectl create namespace datagen 2>/dev/null || echo "Namespace datagen already exists"
 
 print_section "Installing ArgoCD"

@@ -17,7 +17,7 @@ spec:
       values: |-
         auth:
           existingSecret: minio-secrets
-        defaultBuckets: "landing, lakehouse"
+        defaultBuckets: "landing, lakehouse, scripts"
         service:
           type: LoadBalancer
         persistence:

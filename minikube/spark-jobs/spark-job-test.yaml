@@ -1,0 +1,52 @@
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: minio-spark-teste
+  namespace: processing
+  labels:
+    app: spark
+    product: data-processing
+    source: minio
+    table: teste
+    stage: dev
+spec:
+  type: Python
+  mode: cluster
+  image: "minio-spark-dev:latest"
+  imagePullPolicy: Never
+  mainApplicationFile: "s3a://scripts/minio-spark-scripts/teste_spark.py"
+  pythonVersion: "3"
+  sparkVersion: "3.5.1"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 3
+  driver:
+    cores: 1
+    memory: "2G"
+    serviceAccount: spark
+    envSecretKeyRefs:
+      AWS_ACCESS_KEY_ID:
+        name: minio-secrets
+        key: root-user
+      AWS_SECRET_ACCESS_KEY:
+        name: minio-secrets
+        key: root-password
+  executor:
+    cores: 1
+    instances: 2
+    memory: "2G"
+    envSecretKeyRefs:
+      AWS_ACCESS_KEY_ID:
+        name: minio-secrets
+        key: root-user
+      AWS_SECRET_ACCESS_KEY:
+        name: minio-secrets
+        key: root-password
+  sparkConf:
+    "spark.hadoop.fs.s3a.endpoint": "http://minio.deepstorage.svc.cluster.local:9000"
+    "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.connection.ssl.enabled": "false"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider"
+    "spark.sql.extensions": "io.delta.sql.DeltaSparkSessionExtension"
+    "spark.sql.catalog.spark_catalog": "org.apache.spark.sql.delta.catalog.DeltaCatalog"
