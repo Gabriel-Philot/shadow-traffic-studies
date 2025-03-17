@@ -11,24 +11,12 @@ spec:
     namespace: processing
   project: default
   source:
-    repoURL: "https://googlecloudplatform.github.io/spark-on-k8s-operator"
-    targetRevision: 1.1.25
+    repoURL: "https://kubeflow.github.io/spark-operator"
+    targetRevision: 1.4.2
     helm:
       values: |-
         webhook:
           enable: true
-        sparkJobNamespace: processing
-        serviceAccounts:
-          spark:
-            name: spark
-        operator:
-          image:
-            repository: gcr.io/spark-operator/spark-operator
-            tag: v1.1.25
-        spark:
-          image:
-            repository: apache/spark
-            tag: 3.5.1
     chart: spark-operator
   syncPolicy:
     automated:

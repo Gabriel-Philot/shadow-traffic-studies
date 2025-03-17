@@ -15,8 +15,7 @@ spec:
   image: "minio-spark-dev:latest"
   imagePullPolicy: Never
   mainApplicationFile: "s3a://scripts/minio-spark-scripts/teste_spark.py"
-  pythonVersion: "3"
-  sparkVersion: "3.5.1"
+  sparkVersion: "3.3.2"
   restartPolicy:
     type: OnFailure
     onFailureRetries: 3

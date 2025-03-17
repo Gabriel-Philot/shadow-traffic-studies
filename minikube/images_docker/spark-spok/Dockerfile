@@ -1,4 +1,4 @@
-FROM apache/spark-py:v3.5.1
+FROM apache/spark-py:v3.3.2
 
 # Switch to user root para adicionar jars e ferramentas
 USER root
