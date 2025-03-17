@@ -239,6 +239,8 @@ then use token in login page
 
 cd minikube
 
+
+### Notebook
 eval $(minikube docker-env)
 docker build -t jupyter:latest -f images_docker/jupyter-spark/Dockerfile images_docker/jupyter-spark/
 
@@ -247,4 +249,23 @@ kubectl apply -f manifests/jupyter-spark/jupyter-app.yaml
 kubectl exec -it $(kubectl get pods -n jupyter -l app=custom-jupyter -o jsonpath='{.items[0].metadata.name}') -n jupyter -- jupyter server list
 
 
+
+
+### SPOK
 kubectl apply -f manifests/processing/spark-operator.yaml
+
+
+kubectl apply -f access-control/crb-spok.yaml 
+
+
+./scripts-bash/upload-script-spark.sh
+
+eval $(minikube docker-env)
+docker build -t minio-spark-dev:latest -f images_docker/spark-spok/Dockerfile images_docker/spark-spok/
+
+
+# processing
+kubectl apply -f manifests/processing/spark-operator.yaml
+
+
+kubectl apply -f spark-jobs/spark-job-test.yaml

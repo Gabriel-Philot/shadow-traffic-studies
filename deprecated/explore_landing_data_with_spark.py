@@ -1,3 +1,5 @@
+## used to test the connection to the MinIO bucket in jupyterlab
+
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
