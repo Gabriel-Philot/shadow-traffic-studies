@@ -15,6 +15,7 @@ Estando conectado em um cluster Kubernetes, execute os seguintes comandos para c
 
 ```sh
 kubectl create namespace orchestrator
+kubectl create namespace processing
 kubectl create namespace deepstorage
 kubectl create namespace cicd
 kubectl create namespace app
@@ -232,3 +233,18 @@ link = {external-ip} + 8888
 then use token in login page
 
 ```
+
+------
+--- new part ------
+
+cd minikube
+
+eval $(minikube docker-env)
+docker build -t jupyter:latest -f images_docker/jupyter-spark/Dockerfile images_docker/jupyter-spark/
+
+kubectl apply -f manifests/jupyter-spark/jupyter-app.yaml
+
+kubectl exec -it $(kubectl get pods -n jupyter -l app=custom-jupyter -o jsonpath='{.items[0].metadata.name}') -n jupyter -- jupyter server list
+
+
+kubectl apply -f manifests/processing/spark-operator.yaml
