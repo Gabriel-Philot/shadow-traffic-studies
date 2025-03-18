@@ -49,11 +49,11 @@ fi
 
 # Fazer upload do script de teste
 echo -e "\n${YELLOW}Fazendo upload do script de teste para o MinIO...${NC}"
-aws --endpoint-url=http://${MINIO_ENDPOINT} s3 cp spark-src/test_spark.py s3://scripts/minio-spark-scripts/
+aws --endpoint-url=http://${MINIO_ENDPOINT} s3 cp spark-src/test_spark2.py s3://scripts/minio-spark-scripts/
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}Script enviado para o MinIO com sucesso!${NC}"
-    echo -e "Caminho no MinIO: s3a://scripts/minio-spark-scripts/test_spark.py"
+    echo -e "Caminho no MinIO: s3a://scripts/minio-spark-scripts/test_spark2.py"
 else
     echo -e "${RED}Erro ao enviar script para o MinIO!${NC}"
 fi

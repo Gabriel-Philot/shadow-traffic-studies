@@ -12,9 +12,9 @@ metadata:
 spec:
   type: Python
   mode: cluster
-  image: "apache/spark-py:v3.5.0"
+  image: spark:3.5.0
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: "s3a://scripts/minio-spark-scripts/test_spark.py"
+  mainApplicationFile: "s3a://scripts/minio-spark-scripts/test_spark2.py"
   sparkVersion: "3.5.0"
   restartPolicy:
     type: OnFailure
@@ -44,9 +44,10 @@ spec:
         key: root-password
   deps:
     packages:
-      - org.apache.hadoop:hadoop-aws:3.3.1
+      - org.apache.hadoop:hadoop-aws:3.3.4
+      - org.apache.hadoop:hadoop-common:3.3.4
       - io.delta:delta-spark_2.12:3.2.0
-      - com.amazonaws:aws-java-sdk-bundle:1.12.431
+      - com.amazonaws:aws-java-sdk-bundle:1.11.901
     repositories:
       - https://repo1.maven.org/maven2
   sparkConf:
@@ -60,8 +61,4 @@ spec:
     "spark.delta.logStore.class": "org.apache.spark.sql.delta.storage.S3SingleDriverLogStore"
     "spark.databricks.delta.schema.autoMerge.enabled": "true"
     "spark.databricks.delta.retentionDurationCheck.enabled": "false"
-    "spark.sql.files.maxPartitionBytes": "134217728"
-    "spark.sql.legacy.charVarcharAsString": "true"
     "spark.jars.ivy": "/tmp/.ivy2"
-    "spark.eventLog.enabled": "true"
-    "spark.eventLog.dir": "s3a://scripts/spark-logs/"
