@@ -269,3 +269,5 @@ kubectl apply -f manifests/processing/spark-operator.yaml
 
 
 kubectl apply -f spark-jobs/spark-job-test.yaml
+
+kubectl apply -f spark-jobs/spark-job-test-original-spark-imag.yaml

@@ -83,10 +83,11 @@ scripts-bash/
 secrets/
   minio-secrets.yaml
 spark-jobs/
+  spark-job-test-original-spark-imag.yaml
   spark-job-test.yaml
 spark-src/
   test_spark.py
-explore_landing_data_with_spark.py
+  test_spark2.py
 license.env
 
 ================================================================
@@ -1017,11 +1018,11 @@ fi
 
 # Fazer upload do script de teste
 echo -e "\n${YELLOW}Fazendo upload do script de teste para o MinIO...${NC}"
-aws --endpoint-url=http://${MINIO_ENDPOINT} s3 cp spark-src/test_spark.py s3://scripts/minio-spark-scripts/
+aws --endpoint-url=http://${MINIO_ENDPOINT} s3 cp spark-src/test_spark2.py s3://scripts/minio-spark-scripts/
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}Script enviado para o MinIO com sucesso!${NC}"
-    echo -e "Caminho no MinIO: s3a://scripts/minio-spark-scripts/test_spark.py"
+    echo -e "Caminho no MinIO: s3a://scripts/minio-spark-scripts/test_spark2.py"
 else
     echo -e "${RED}Erro ao enviar script para o MinIO!${NC}"
 fi
@@ -1044,6 +1045,74 @@ type: Opaque
 data:
   root-user: "bWluaW91c2Vy"
   root-password: "bWluaW9zZWNyZXQ="
+
+================
+File: spark-jobs/spark-job-test-original-spark-imag.yaml
+================
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: minio-spark-teste
+  namespace: processing
+  labels:
+    app: spark
+    product: data-processing
+    source: minio
+    table: teste
+    stage: dev
+spec:
+  type: Python
+  mode: cluster
+  image: spark:3.5.0
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: "s3a://scripts/minio-spark-scripts/test_spark2.py"
+  sparkVersion: "3.5.0"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 3
+  driver:
+    cores: 1
+    memory: "2G"
+    serviceAccount: default
+    envSecretKeyRefs:
+      AWS_ACCESS_KEY_ID:
+        name: minio-secrets
+        key: root-user
+      AWS_SECRET_ACCESS_KEY:
+        name: minio-secrets
+        key: root-password
+  executor:
+    cores: 1
+    instances: 2
+    memory: "2G"
+    serviceAccount: default
+    envSecretKeyRefs:
+      AWS_ACCESS_KEY_ID:
+        name: minio-secrets
+        key: root-user
+      AWS_SECRET_ACCESS_KEY:
+        name: minio-secrets
+        key: root-password
+  deps:
+    packages:
+      - org.apache.hadoop:hadoop-aws:3.3.4
+      - org.apache.hadoop:hadoop-common:3.3.4
+      - io.delta:delta-spark_2.12:3.2.0
+      - com.amazonaws:aws-java-sdk-bundle:1.11.901
+    repositories:
+      - https://repo1.maven.org/maven2
+  sparkConf:
+    "spark.hadoop.fs.s3a.endpoint": "http://minio.deepstorage.svc.cluster.local:9000"
+    "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.connection.ssl.enabled": "false"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider"
+    "spark.sql.extensions": "io.delta.sql.DeltaSparkSessionExtension"
+    "spark.sql.catalog.spark_catalog": "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+    "spark.delta.logStore.class": "org.apache.spark.sql.delta.storage.S3SingleDriverLogStore"
+    "spark.databricks.delta.schema.autoMerge.enabled": "true"
+    "spark.databricks.delta.retentionDurationCheck.enabled": "false"
+    "spark.jars.ivy": "/tmp/.ivy2"
 
 ================
 File: spark-jobs/spark-job-test.yaml
@@ -1199,40 +1268,33 @@ print("="*80)
 spark.stop()
 
 ================
-File: explore_landing_data_with_spark.py
+File: spark-src/test_spark2.py
 ================
+"""
+Script de teste para verificar o acesso direto ao MinIO via S3A
+"""
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import *
-from pyspark.sql.types import *
+import pyspark.sql.functions as F
 import os
+import socket
+import datetime
 
-
-# Obter credenciais do MinIO
-minio_endpoint = os.environ.get('MINIO_ENDPOINT')
-minio_access_key = os.environ.get('MINIO_ACCESS_KEY')
-minio_secret_key = os.environ.get('MINIO_SECRET_KEY')
-
-# Criar sessão Spark
+# Inicialização simplificada - as configurações vêm do SparkApplication
 spark = SparkSession.builder \
-    .appName("TestSparkMinIO") \
-    .config("spark.hadoop.fs.s3a.access.key", minio_access_key) \
-    .config("spark.hadoop.fs.s3a.secret.key", minio_secret_key) \
-    .config("spark.hadoop.fs.s3a.endpoint", minio_endpoint.replace("http://", "")) \
-    .config("spark.hadoop.fs.s3a.path.style.access", "true") \
-    .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
-    .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
+    .appName("MinioSparkTest") \
     .getOrCreate()
 
-print(f"Spark version: {spark.version}")
+print("="*80)
+print("TESTE DE ACESSO DIRETO AO SCRIPT NO MINIO")
+print("="*80)
 
-# Testar leitura do MinIO
-try:
-    path = "s3a://landing/shadow-traffic-data/customers/"
-    df = spark.read.json(path)
-    print("Amostra de dados:")
-    df.show(5)
-except Exception as e:
-    print(f"Erro ao ler dados: {e}")
+# Imprimir informações do ambiente para diagnóstico
+print(f"Data/Hora atual: {datetime.datetime.now()}")
+print(f"Hostname: {socket.gethostname()}")
+print(f"Diretório atual: {os.getcwd()}")
+print(f"Versão do Spark: {spark.version}")
+
+# Resto do código mantido igual...
 
 ================
 File: license.env
