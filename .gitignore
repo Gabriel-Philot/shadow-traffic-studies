@@ -4,3 +4,7 @@
 license.env
 **/license.env
 license.env*
+
+
+# jars
+*.jar

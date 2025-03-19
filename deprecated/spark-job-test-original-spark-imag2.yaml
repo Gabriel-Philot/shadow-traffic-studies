@@ -1,0 +1,66 @@
+apiVersion: "sparkoperator.k8s.io/v1beta2"
+kind: SparkApplication
+metadata:
+  name: minio-spark-teste
+  namespace: processing
+  labels:
+    app: spark
+    product: data-processing
+    source: minio
+    table: teste
+    stage: dev
+spec:
+  type: Python
+  mode: cluster
+  image: spark:3.5.0
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: "s3a://scripts/minio-spark-scripts/test_spark2.py"
+  sparkVersion: "3.5.0"
+  restartPolicy:
+    type: OnFailure
+    onFailureRetries: 3
+  driver:
+    cores: 1
+    memory: "2G"
+    serviceAccount: default
+    envSecretKeyRefs:
+      AWS_ACCESS_KEY_ID:
+        name: minio-secrets
+        key: root-user
+      AWS_SECRET_ACCESS_KEY:
+        name: minio-secrets
+        key: root-password
+  executor:
+    cores: 1
+    instances: 2
+    memory: "2G"
+    serviceAccount: default
+    envSecretKeyRefs:
+      AWS_ACCESS_KEY_ID:
+        name: minio-secrets
+        key: root-user
+      AWS_SECRET_ACCESS_KEY:
+        name: minio-secrets
+        key: root-password
+  deps:
+    pyFiles:
+      - "s3a://scripts/minio-spark-scripts/utils_modules.zip"
+    packages:
+      - org.apache.hadoop:hadoop-aws:3.3.4
+      - org.apache.hadoop:hadoop-common:3.3.4
+      - io.delta:delta-spark_2.12:3.2.0
+      - com.amazonaws:aws-java-sdk-bundle:1.11.901
+    repositories:
+      - https://repo1.maven.org/maven2
+  sparkConf:
+    "spark.hadoop.fs.s3a.endpoint": "http://minio.deepstorage.svc.cluster.local:9000"
+    "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.connection.ssl.enabled": "false"
+    "spark.hadoop.fs.s3a.aws.credentials.provider": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider"
+    "spark.sql.extensions": "io.delta.sql.DeltaSparkSessionExtension"
+    "spark.sql.catalog.spark_catalog": "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+    "spark.delta.logStore.class": "org.apache.spark.sql.delta.storage.S3SingleDriverLogStore"
+    "spark.databricks.delta.schema.autoMerge.enabled": "true"
+    "spark.databricks.delta.retentionDurationCheck.enabled": "false"
+    "spark.jars.ivy": "/tmp/.ivy2"

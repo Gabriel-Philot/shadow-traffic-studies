@@ -54,14 +54,13 @@ images_docker/
     license.env
   jupyter-spark/
     Dockerfile
-  spark-spok/
+  spok-plus-modules/
+    utils/
+      utils_test.py
     Dockerfile
+    download-jars.sh
 manifests/
   datagen/
-    backup/
-      shadowtraffic-config copy.yaml
-      shadowtraffic-config.yaml
-      shadowtraffic-config2.yaml
     generator-secrets.yaml
     shadowtraffic-config.yaml
     shadowtraffic-deployment.yaml
@@ -83,10 +82,8 @@ scripts-bash/
 secrets/
   minio-secrets.yaml
 spark-jobs/
-  spark-job-test-original-spark-imag.yaml
-  spark-job-test.yaml
+  spark-job-modules-test.yaml
 spark-src/
-  test_spark.py
   test_spark2.py
 license.env
 
@@ -187,208 +184,130 @@ ENV PYSPARK_SUBMIT_ARGS="--packages io.delta:delta-core_2.12:2.1.0,org.apache.ha
 CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser"]
 
 ================
-File: images_docker/spark-spok/Dockerfile
+File: images_docker/spok-plus-modules/utils/utils_test.py
 ================
-FROM apache/spark-py:v3.3.2
+def hello_spark():
+    """Retorna uma mensagem de teste."""
+    return "Hello from utils_test.py! Módulo importado com sucesso!"
 
-# Switch to user root para adicionar jars e ferramentas
+def process_data(df):
+    """
+    Processa um DataFrame adicionando novas colunas.
+    
+    Args:
+        df: Um DataFrame Spark
+    
+    Returns:
+        DataFrame processado com novas colunas
+    """
+    from pyspark.sql import functions as F
+    
+    # Adiciona uma coluna com a idade em meses
+    processed = df.withColumn("idade_meses", F.col("idade") * 12)
+    
+    # Adiciona uma coluna com a categoria de idade
+    processed = processed.withColumn(
+        "categoria_idade",
+        F.when(F.col("idade") < 25, "jovem")
+         .when(F.col("idade") < 35, "adulto")
+         .otherwise("senior")
+    )
+    
+    return processed
+
+================
+File: images_docker/spok-plus-modules/Dockerfile
+================
+FROM spark:3.5.3
+
 USER root
 
-# Criar diretório para a aplicação
-RUN mkdir -p /app
+RUN chmod -R 777 /tmp
 
-# Adicionar os JARs necessários para S3/MinIO e Delta Lake
-ADD https://repo1.maven.org/maven2/io/delta/delta-core_2.12/2.2.0/delta-core_2.12-2.2.0.jar $SPARK_HOME/jars/
-ADD https://repo1.maven.org/maven2/io/delta/delta-storage/2.2.0/delta-storage-2.2.0.jar $SPARK_HOME/jars/
-ADD https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.431/aws-java-sdk-bundle-1.12.431.jar $SPARK_HOME/jars/
-ADD https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/3.3.4/hadoop-common-3.3.4.jar $SPARK_HOME/jars/
-ADD https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar $SPARK_HOME/jars/
+# Criar diretório para módulos Python personalizados
+RUN mkdir -p /opt/spark/work-dir/utils
+
+# Copiar módulos Python auxiliares
+COPY utils/ /opt/spark/work-dir/utils/
+
+# Copiar JARs para o diretório jars do Spark
+COPY jars/*.jar $SPARK_HOME/jars/
 
 # Definir permissões corretas
-RUN chmod 644 $SPARK_HOME/jars/*.jar
+RUN chmod 645 $SPARK_HOME/jars/*.jar && \
+    chmod -R 777 /opt/spark/work-dir/utils
 
-# Instalar dependências adicionais necessárias
-RUN pip install --no-cache-dir \
-    delta-spark \
-    pandas \
-    pyarrow \
-    matplotlib \
-    seaborn
+# Instalar bibliotecas Python
+RUN pip install delta-spark==3.3.0
+RUN pip install boto3
 
-# Configurar ambiente para acesso ao MinIO
-ENV PYSPARK_PYTHON=python3
-ENV PYSPARK_DRIVER_PYTHON=python3
-
-# Definir diretório de trabalho
-WORKDIR /app
-
-# Voltar para o usuário do Spark
+# Voltar para o usuário Spark
 USER ${spark_uid}
 
 ================
-File: manifests/datagen/backup/shadowtraffic-config copy.yaml
+File: images_docker/spok-plus-modules/download-jars.sh
 ================
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: shadowtraffic-config
-  namespace: datagen
-data:
-  v0_local_gen_minio.json: |
-    {
-      "generators": [
-        {
-          "connection": "s3",
-          "bucket": "landing",
-          "bucketConfigs": {
-            "keyPrefix": "shadow-traffic-data/customers/",
-            "format": "jsonl"
-          },
-          "data": {
-            "id": { "_gen": "uuid" },
-            "profile": {
-              "first_name": { "_gen": "string", "expr": "#{Name.firstName}" },
-              "last_name": { "_gen": "string", "expr": "#{Name.lastName}" },
-              "full_name": { "_gen": "string", "expr": "#{Name.fullName}" },
-              "age": { "_gen": "uniformDistribution", "bounds": [18, 80], "decimals": 0 },
-              "email": { "_gen": "string", "expr": "#{Internet.emailAddress}" },
-              "avatar": { "_gen": "string", "expr": "https://cloudflare-ipfs.com/ipfs/Qmd3W5DuhgHirLHGVixi6V76LhCkZUz6pnFt5AJBiyvHye/avatar/#{number.numberBetween '1','1000'}.jpg" }
-            },
-            "address": {
-              "street": { "_gen": "string", "expr": "#{Address.streetAddress}" },
-              "city": { "_gen": "string", "expr": "#{Address.city}" },
-              "state": { "_gen": "string", "expr": "#{Address.stateAbbr}" },
-              "zipcode": { "_gen": "string", "expr": "#{Address.zipCode}" },
-              "country": { "_gen": "string", "expr": "#{Address.country}" },
-              "coordinates": {
-                "latitude": { "_gen": "uniformDistribution", "bounds": [-90, 90], "decimals": 6 },
-                "longitude": { "_gen": "uniformDistribution", "bounds": [-180, 180], "decimals": 6 }
-              }
-            }
-          },
-          "localConfigs": {
-            "maxEvents": 100,
-            "throttleMs": 100
-          }
-        }
-      ],
-      "connections": {
-        "s3": {
-          "kind": "s3",
-          "connectionConfigs": {
-            "endpoint": "http://minio.deepstorage.svc.cluster.local:9000",
-            "pathStyleAccess": true,
-            "forcePathStyle": true
-          },
-          "batchConfigs": {
-            "lingerMs": 5000,
-            "batchElements": 15,
-            "batchBytes": 1048576
-          }
-        }
-      }
-    }
+#!/bin/bash
 
-================
-File: manifests/datagen/backup/shadowtraffic-config.yaml
-================
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: shadowtraffic-config
-  namespace: datagen
-data:
-  v0_local_gen_minio.json: |
-    {
-      "generators": [
-        {
-          "connection": "s3",
-          "bucket": "landing",
-          "bucketConfigs": {
-            "keyPrefix": "shadow-traffic-data/",
-            "format": "json"
-          },
-          "data": {
-            "id": { "_gen": "uuid" },
-            "name": { "_gen": "string", "expr": "#{Name.fullName}" },
-            "age": { "_gen": "uniformDistribution", "bounds": [18, 80] }
-          },
-          "localConfigs": {
-            "maxEvents": 100,
-            "throttleMs": 1000
-          }
-        }
-      ],
-      "connections": {
-        "s3": {
-          "kind": "s3",
-          "connectionConfigs": {
-            "endpoint": "http://minio.deepstorage.svc.cluster.local:9000",
-            "pathStyleAccess": true,
-            "forcePathStyle": true
-          }
-        }
-      }
-    }
+# Cores para melhor visualização
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-================
-File: manifests/datagen/backup/shadowtraffic-config2.yaml
-================
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: shadowtraffic-config
-  namespace: datagen
-data:
-  v0_local_gen_minio.json: |
-    {
-      "generators": [
-        {
-          "connection": "s3",
-          "bucket": "landing",
-          "bucketConfigs": {
-            "keyPrefix": "shadow-traffic-data/customers/",
-            "format": "json"
-          },
-          "data": {
-            "id": { "_gen": "uuid" },
-            "profile": {
-              "first_name": { "_gen": "string", "expr": "#{Name.firstName}" },
-              "last_name": { "_gen": "string", "expr": "#{Name.lastName}" },
-              "full_name": { "_gen": "string", "expr": "#{Name.fullName}" },
-              "age": { "_gen": "uniformDistribution", "bounds": [18, 80], "decimals": 0 },
-              "email": { "_gen": "string", "expr": "#{Internet.emailAddress}" },
-              "avatar": { "_gen": "string", "expr": "https://cloudflare-ipfs.com/ipfs/Qmd3W5DuhgHirLHGVixi6V76LhCkZUz6pnFt5AJBiyvHye/avatar/#{number.numberBetween '1','1000'}.jpg" }
-            },
-            "address": {
-              "street": { "_gen": "string", "expr": "#{Address.streetAddress}" },
-              "city": { "_gen": "string", "expr": "#{Address.city}" },
-              "state": { "_gen": "string", "expr": "#{Address.stateAbbr}" },
-              "zipcode": { "_gen": "string", "expr": "#{Address.zipCode}" },
-              "country": { "_gen": "string", "expr": "#{Address.country}" },
-              "coordinates": {
-                "latitude": { "_gen": "uniformDistribution", "bounds": [-90, 90], "decimals": 6 },
-                "longitude": { "_gen": "uniformDistribution", "bounds": [-180, 180], "decimals": 6 }
-              }
-            }
-          },
-          "localConfigs": {
-            "maxEvents": 100,
-            "throttleMs": 1000
-          }
-        }
-      ],
-      "connections": {
-        "s3": {
-          "kind": "s3",
-          "connectionConfigs": {
-            "endpoint": "http://minio.deepstorage.svc.cluster.local:9000",
-            "pathStyleAccess": true,
-            "forcePathStyle": true
-          }
-        }
-      }
-    }
+echo -e "${BLUE}=== Script para download de JARs do Spark ===${NC}"
+
+# Criar diretório jars se não existir
+if [ ! -d "jars" ]; then
+    echo -e "Criando diretório jars..."
+    mkdir -p jars
+    echo -e "${GREEN}✓ Diretório jars criado com sucesso!${NC}"
+else
+    echo -e "${GREEN}✓ Diretório jars já existe!${NC}"
+fi
+
+# Função para baixar JARs
+download_jar() {
+    local url=$1
+    local filename=$(basename "$url")
+    local target="jars/$filename"
+    
+    # Verifica se o arquivo já existe
+    if [ -f "$target" ]; then
+        echo -e "${GREEN}✓ Arquivo $filename já existe. Pulando...${NC}"
+        return 0
+    fi
+    
+    echo -e "Baixando $filename..."
+    wget -q --show-progress "$url" -O "$target"
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✓ Download de $filename concluído com sucesso!${NC}"
+    else
+        echo -e "${RED}✗ Falha ao baixar $filename!${NC}"
+        return 1
+    fi
+}
+
+# Lista de JARs para baixar
+echo -e "\n${BLUE}Iniciando downloads:${NC}"
+
+# Hadoop/AWS JARs
+download_jar "https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar"
+download_jar "https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/3.3.4/hadoop-common-3.3.4.jar"
+download_jar "https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.11.901/aws-java-sdk-bundle-1.11.901.jar"
+
+# Delta Lake JARs
+download_jar "https://repo1.maven.org/maven2/io/delta/delta-spark_2.12/3.3.0/delta-spark_2.12-3.3.0.jar"
+download_jar "https://repo1.maven.org/maven2/io/delta/delta-storage/3.3.0/delta-storage-3.3.0.jar"
+
+# JARs adicionais que podem ser úteis
+download_jar "https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.11.1/commons-pool2-2.11.1.jar"
+
+echo -e "\n${BLUE}=== Resumo ===${NC}"
+echo -e "Total de JARs no diretório: $(ls jars | wc -l)"
+echo -e "${GREEN}Download de JARs concluído!${NC}"
+echo -e "Os JARs estão disponíveis no diretório: $(pwd)/jars"
 
 ================
 File: manifests/datagen/generator-secrets.yaml
@@ -1047,7 +966,7 @@ data:
   root-password: "bWluaW9zZWNyZXQ="
 
 ================
-File: spark-jobs/spark-job-test-original-spark-imag.yaml
+File: spark-jobs/spark-job-modules-test.yaml
 ================
 apiVersion: "sparkoperator.k8s.io/v1beta2"
 kind: SparkApplication
@@ -1063,8 +982,8 @@ metadata:
 spec:
   type: Python
   mode: cluster
-  image: spark:3.5.0
-  imagePullPolicy: IfNotPresent
+  image: custom-spark:latest
+  imagePullPolicy: Never
   mainApplicationFile: "s3a://scripts/minio-spark-scripts/test_spark2.py"
   sparkVersion: "3.5.0"
   restartPolicy:
@@ -1093,14 +1012,6 @@ spec:
       AWS_SECRET_ACCESS_KEY:
         name: minio-secrets
         key: root-password
-  deps:
-    packages:
-      - org.apache.hadoop:hadoop-aws:3.3.4
-      - org.apache.hadoop:hadoop-common:3.3.4
-      - io.delta:delta-spark_2.12:3.2.0
-      - com.amazonaws:aws-java-sdk-bundle:1.11.901
-    repositories:
-      - https://repo1.maven.org/maven2
   sparkConf:
     "spark.hadoop.fs.s3a.endpoint": "http://minio.deepstorage.svc.cluster.local:9000"
     "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
@@ -1113,91 +1024,102 @@ spec:
     "spark.databricks.delta.schema.autoMerge.enabled": "true"
     "spark.databricks.delta.retentionDurationCheck.enabled": "false"
     "spark.jars.ivy": "/tmp/.ivy2"
+    "spark.executorEnv.PYTHONPATH": "/opt/spark/work-dir"
+    "spark.driver.extraClassPath": "/opt/spark/work-dir"
 
 ================
-File: spark-jobs/spark-job-test.yaml
-================
-apiVersion: "sparkoperator.k8s.io/v1beta2"
-kind: SparkApplication
-metadata:
-  name: minio-spark-teste
-  namespace: processing
-  labels:
-    app: spark
-    product: data-processing
-    source: minio
-    table: teste
-    stage: dev
-spec:
-  type: Python
-  mode: cluster
-  image: "minio-spark-dev:latest"
-  imagePullPolicy: Never
-  mainApplicationFile: "s3a://scripts/minio-spark-scripts/test_spark.py"
-  sparkVersion: "3.3.2"
-  restartPolicy:
-    type: OnFailure
-    onFailureRetries: 3
-  driver:
-    cores: 1
-    memory: "2G"
-    serviceAccount: default
-    envSecretKeyRefs:
-      AWS_ACCESS_KEY_ID:
-        name: minio-secrets
-        key: root-user
-      AWS_SECRET_ACCESS_KEY:
-        name: minio-secrets
-        key: root-password
-  executor:
-    cores: 1
-    instances: 2
-    memory: "2G"
-    serviceAccount: default
-    envSecretKeyRefs:
-      AWS_ACCESS_KEY_ID:
-        name: minio-secrets
-        key: root-user
-      AWS_SECRET_ACCESS_KEY:
-        name: minio-secrets
-        key: root-password
-  sparkConf:
-    "spark.hadoop.fs.s3a.endpoint": "http://minio.deepstorage.svc.cluster.local:9000"
-    "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
-    "spark.hadoop.fs.s3a.path.style.access": "true"
-    "spark.hadoop.fs.s3a.connection.ssl.enabled": "false"
-    "spark.hadoop.fs.s3a.aws.credentials.provider": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider"
-    "spark.sql.extensions": "io.delta.sql.DeltaSparkSessionExtension"
-    "spark.sql.catalog.spark_catalog": "org.apache.spark.sql.delta.catalog.DeltaCatalog"
-
-================
-File: spark-src/test_spark.py
+File: spark-src/test_spark2.py
 ================
 """
 Script de teste para verificar o acesso direto ao MinIO via S3A
-Este arquivo deve ser carregado em: s3a://scripts/minio-spark-scripts/teste_spark.py
 """
 from pyspark.sql import SparkSession
 import pyspark.sql.functions as F
 import os
+import sys
 import socket
 import datetime
 
-# Inicializar o Spark com as configurações para Delta Lake
-spark = SparkSession.builder \
-    .appName("MinioSparkTest") \
-    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-    .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
-    .getOrCreate()
-
+# Diagnóstico e configuração do ambiente
 print("="*80)
-print("TESTE DE ACESSO DIRETO AO SCRIPT NO MINIO")
-print("="*80)
-
-# Imprimir informações do ambiente para diagnóstico
+print("DIAGNÓSTICO DO AMBIENTE PYTHON")
 print(f"Data/Hora atual: {datetime.datetime.now()}")
 print(f"Hostname: {socket.gethostname()}")
 print(f"Diretório atual: {os.getcwd()}")
+print(f"Conteúdo do diretório atual: {os.listdir('.')}")
+
+# Adicionar caminhos ao sys.path
+possible_paths = [
+    '/opt/spark/work-dir',
+    '/opt/spark/work-dir/utils',
+    '/usr/local/lib/python3.9/site-packages',
+    '/usr/local/lib/python3.8/site-packages',
+    '/usr/local/lib/python3.7/site-packages',
+    os.getcwd()
+]
+
+for path in possible_paths:
+    if path not in sys.path and os.path.exists(path):
+        sys.path.insert(0, path)
+        print(f"Adicionado ao sys.path: {path}")
+
+print(f"PYTHONPATH atual: {sys.path}")
+
+# Verificar diretórios onde o módulo utils poderia estar
+for path in sys.path:
+    try:
+        if os.path.exists(path):
+            print(f"Conteúdo de {path}: {os.listdir(path)}")
+            if os.path.exists(os.path.join(path, 'utils')):
+                utils_dir = os.path.join(path, 'utils')
+                print(f"Conteúdo de {utils_dir}: {os.listdir(utils_dir)}")
+    except Exception as e:
+        print(f"Erro ao listar {path}: {e}")
+
+# Tentar importar de diferentes maneiras
+try:
+    # Tentativa 1: importação normal
+    print("Tentando importação normal...")
+    from utils.utils_test import hello_spark, process_data
+    print("Importação normal bem-sucedida!")
+except ImportError as e1:
+    print(f"Erro na importação normal: {e1}")
+    
+    try:
+        # Tentativa 2: importação com caminho absoluto
+        print("Tentando importação absoluta...")
+        sys.path.append('/opt/spark/work-dir')
+        from utils.utils_test import hello_spark, process_data
+        print("Importação absoluta bem-sucedida!")
+    except ImportError as e2:
+        print(f"Erro na importação absoluta: {e2}")
+        
+        try:
+            # Tentativa 3: importação manual do módulo
+            print("Tentando importação manual...")
+            import imp
+            utils_test = imp.load_source('utils_test', '/opt/spark/work-dir/utils/utils_test.py')
+            hello_spark = utils_test.hello_spark
+            process_data = utils_test.process_data
+            print("Importação manual bem-sucedida!")
+        except Exception as e3:
+            print(f"Erro na importação manual: {e3}")
+            
+            # Definir funções mock se tudo falhar
+            print("Usando funções mock...")
+            def hello_spark():
+                return "Função mock - importação falhou"
+                
+            def process_data(df):
+                return df.withColumn("mock_column", F.lit("Importação falhou"))
+
+# Inicialização do Spark
+print("="*80)
+print("INICIALIZANDO SPARK")
+spark = SparkSession.builder \
+    .appName("MinioSparkTest") \
+    .getOrCreate()
+
 print(f"Versão do Spark: {spark.version}")
 
 # Criar um DataFrame simples para teste
@@ -1214,87 +1136,21 @@ df = spark.createDataFrame(data, columns)
 # Mostrar amostra
 df.show()
 
-# Aplicar algumas transformações
-df_transformed = df.withColumn("mensagem", 
-                             F.concat(F.lit("Olá "), 
-                                     F.col("nome"), 
-                                     F.lit("! Você tem "), 
-                                     F.col("idade").cast("string"), 
-                                     F.lit(" anos.")))
-print("DataFrame transformado:")
-df_transformed.show(truncate=False)
+# Testar a função hello_spark
+print("\nTestando função hello_spark:")
+message = hello_spark()
+print(message)
 
-# Tentar listar arquivos no MinIO
-print("\nTestando acesso ao MinIO...")
-try:
-    # Listar conteúdo do bucket landing
-    landing_files = spark._jvm.org.apache.hadoop.fs.FileSystem.get(
-        spark._jsc.hadoopConfiguration()
-    ).listStatus(spark._jvm.org.apache.hadoop.fs.Path("s3a://landing/"))
-    
-    print("Arquivos no bucket landing:")
-    for file_status in landing_files:
-        print(f"  - {file_status.getPath().getName()}")
-
-    # Tentar acessar dados reais se existirem
-    try:
-        # Tentar ler arquivo JSON do bucket landing
-        customer_df = spark.read.format("json").load("s3a://landing/shadow-traffic-data/customers/")
-        print("\nDados de clientes encontrados! Amostra:")
-        customer_df.printSchema()
-        customer_df.show(5, truncate=False)
-        print(f"Total de registros: {customer_df.count()}")
-    except Exception as e:
-        print(f"Não foi possível ler dados de clientes: {e}")
-        
-except Exception as e:
-    print(f"Erro ao acessar MinIO: {str(e)}")
-
-# Escrever resultado em Delta format como teste
-try:
-    print("\nTentando escrever dados no formato Delta...")
-    df_transformed.write \
-        .format("delta") \
-        .mode("overwrite") \
-        .save("s3a://scripts/teste-output/delta-teste")
-    print("Dados escritos com sucesso no formato Delta!")
-except Exception as e:
-    print(f"Erro ao escrever no formato Delta: {str(e)}")
+# Aplicar função process_data
+print("\nAplicando função process_data:")
+processed_df = process_data(df)
+processed_df.show()
 
 print("\nTESTE CONCLUÍDO COM SUCESSO!")
 print("="*80)
 
 # Encerrar a sessão Spark
 spark.stop()
-
-================
-File: spark-src/test_spark2.py
-================
-"""
-Script de teste para verificar o acesso direto ao MinIO via S3A
-"""
-from pyspark.sql import SparkSession
-import pyspark.sql.functions as F
-import os
-import socket
-import datetime
-
-# Inicialização simplificada - as configurações vêm do SparkApplication
-spark = SparkSession.builder \
-    .appName("MinioSparkTest") \
-    .getOrCreate()
-
-print("="*80)
-print("TESTE DE ACESSO DIRETO AO SCRIPT NO MINIO")
-print("="*80)
-
-# Imprimir informações do ambiente para diagnóstico
-print(f"Data/Hora atual: {datetime.datetime.now()}")
-print(f"Hostname: {socket.gethostname()}")
-print(f"Diretório atual: {os.getcwd()}")
-print(f"Versão do Spark: {spark.version}")
-
-# Resto do código mantido igual...
 
 ================
 File: license.env

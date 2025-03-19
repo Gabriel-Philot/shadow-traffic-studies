@@ -254,17 +254,28 @@ kubectl exec -it $(kubectl get pods -n jupyter -l app=custom-jupyter -o jsonpath
 
 ### SPOK
 kubectl apply -f manifests/processing/spark-operator.yaml
+
+
 kubectl apply -f access-control/crb-spok.yaml 
 
- 
+
 ./scripts-bash/upload-script-spark.sh
-dont forget to change here the send of main.py to bucket
+
+./scripts-bash/module-test-minio-src.sh 
 
 eval $(minikube docker-env)
-docker build -t custom-spark:latest -f images_docker/spok-plus-modules/Dockerfile images_docker/spok-plus-modules/
+docker build -t minio-spark-dev:latest -f images_docker/spark-spok/Dockerfile images_docker/spark-spok/
+
+eval $(minikube docker-env)
+docker build -t custom-spark:latest -f images_docker/spark-with-modules/Dockerfile images_docker/spark-with-modules/
+
+
+docker rmi -f custom-spark:latest
+
+# processing
+kubectl apply -f manifests/processing/spark-operator.yaml
+
+
+kubectl apply -f spark-jobs/spark-job-test.yaml
 
 kubectl apply -f spark-jobs/spark-job-modules-test.yaml
-here aways pay attention for the path/file name in bashupload script main.py to bucket 
-
-utils
-docker rmi -f custom-spark:latest
