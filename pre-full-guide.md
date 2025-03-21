@@ -250,7 +250,7 @@ kubectl exec -it $(kubectl get pods -n jupyter -l app=custom-jupyter -o jsonpath
 
 
 
-./scripts-bash/test_automation_configk8.sh
+./scripts-bash/automation_config_k8.sh
 
 ### SPOK
 kubectl apply -f manifests/processing/spark-operator.yaml
